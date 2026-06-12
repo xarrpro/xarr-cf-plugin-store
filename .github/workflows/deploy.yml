@@ -1,0 +1,54 @@
+name: Deploy to Cloudflare Workers
+
+# 触发:推送到 main 自动部署;也支持在 Actions 页手动触发(Run workflow)。
+on:
+  push:
+    branches: [main]
+    # 只在影响运行时的改动上触发(改文档/CI 本身不重复部署)
+    paths-ignore:
+      - "README.md"
+      - "docs/**"
+  workflow_dispatch: {}
+
+# 同一时间只跑一个部署;新 push 取消正在进行的旧部署。
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 真实 wrangler.toml 不在版本库(含资源 ID,已 gitignore)。
+      # 从 .example 生成,并用 GitHub Secrets 注入真实资源 ID。
+      - name: Generate wrangler.toml from example
+        run: |
+          cp wrangler.toml.example wrangler.toml
+          sed -i "s|<your-cloudflare-account-id>|${{ secrets.CF_ACCOUNT_ID }}|g" wrangler.toml
+          sed -i "s|<your-d1-database-id>|${{ secrets.CF_D1_DATABASE_ID }}|g" wrangler.toml
+          sed -i "s|<your-kv-namespace-id>|${{ secrets.CF_KV_ID }}|g" wrangler.toml
+          # 校验占位符已全部替换(还残留 < > 说明缺 Secret)
+          if grep -q "<your-" wrangler.toml; then
+            echo "::error::wrangler.toml 仍有未替换占位符,请检查 GitHub Secrets(CF_ACCOUNT_ID / CF_D1_DATABASE_ID / CF_KV_ID)"
+            exit 1
+          fi
+
+      # 仅部署 Worker —— 不跑 D1 migrations(远程 schema 与迁移文件不一致,自动迁移有风险)。
+      # 三个机密(ADMIN_TOKEN/ADMIN_PATH/GATEWAY_UUID_SEED)已是 Cloudflare Secret,deploy 不会改动。
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # 与本地一致,避免 wrangler 4.x 行为差异
+          wranglerVersion: "3.114.17"
+          command: deploy --config ./wrangler.toml
