@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+.dev.vars
+*.log
+.DS_Store
+
+# 含真实账户/资源 ID,不进版本库;请用 wrangler.toml.example 作模板
+wrangler.toml

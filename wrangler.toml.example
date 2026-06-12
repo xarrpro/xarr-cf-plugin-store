@@ -1,0 +1,55 @@
+# 复制为 wrangler.toml 并填入你自己的 Cloudflare 资源 ID 后再部署:
+#   cp wrangler.toml.example wrangler.toml
+# 真实的 wrangler.toml 已被 .gitignore 忽略,不会进版本库。
+
+name = "cf-plugin-store"
+main = "src/index.ts"
+account_id = "<your-cloudflare-account-id>"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# 把 .txt 产物作为 Text 模块内联进 Worker(离线 Shoelace/fflate);fallthrough 保留默认规则
+rules = [
+  { type = "Text", globs = ["**/*.txt"], fallthrough = true }
+]
+
+# 机密不写在这里,改用 Cloudflare Secret(加密存储,不进部署产物 / 版本库):
+#   printf '%s' '<管理员主令牌>'  | npx wrangler secret put ADMIN_TOKEN
+#   printf '%s' '<后台自定义密路径>' | npx wrangler secret put ADMIN_PATH
+#   printf '%s' '<默认下载入口uuid>' | npx wrangler secret put GATEWAY_UUID_SEED
+# 本地开发可改放在 .dev.vars(已被 .gitignore 忽略):
+#   ADMIN_TOKEN="..."
+#   ADMIN_PATH="..."
+#   GATEWAY_UUID_SEED="..."
+# 代码统一经 c.env.* 读取,secret 与 .dev.vars 无感切换。
+
+[[d1_databases]]
+binding = "DB"
+database_name = "plugin_store"
+database_id = "<your-d1-database-id>"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "plugin-store-packages"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "<your-kv-namespace-id>"
+
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+
+[observability]
+enabled = false
+head_sampling_rate = 1
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+persist = true
+invocation_logs = true

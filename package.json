@@ -1,0 +1,27 @@
+{
+  "name": "cf-plugin-store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:cli": "vitest run --config cli/vitest.config.ts",
+    "migrate:local": "wrangler d1 migrations apply plugin_store --local",
+    "migrate:remote": "wrangler d1 migrations apply plugin_store --remote"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.5.0",
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "@shoelace-style/shoelace": "^2.20.1",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.6.0",
+    "vitest": "2.1.9",
+    "wrangler": "^3.78.0"
+  }
+}
