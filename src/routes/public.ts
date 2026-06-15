@@ -2,8 +2,12 @@ import { Hono } from "hono";
 import type { Env } from "../types";
 import { ok, err } from "../lib/response";
 import { listPlugins, getPluginByName, getReleases } from "../services/db";
+import { rateLimitGuard } from "../middleware/ratelimit";
 
 export const publicRoutes = new Hono<{ Bindings: Env }>();
+
+// 公开只读 API 全部限流(按 IP),防止反复刷新打满 D1 行读取 / Workers 调用计费。
+publicRoutes.use("*", rateLimitGuard);
 
 function gt(a: string, b: string): boolean {
   const pa = a.split(".").map(Number), pb = b.split(".").map(Number);
@@ -14,14 +18,21 @@ function gt(a: string, b: string): boolean {
   return false;
 }
 
+// 给响应加短缓存:浏览器/边缘在 TTL 内命中缓存,反复刷新不再回源查 D1。
+// 元数据变动不频繁,30s 足够;s-maxage 供 CF 边缘缓存(同一 URL 跨客户端共享)。
+function cached(res: Response, seconds = 30): Response {
+  res.headers.set("Cache-Control", `public, max-age=${seconds}, s-maxage=${seconds}`);
+  return res;
+}
+
 // 列表:GET /api/plugins?type=&q= (公开元数据,不含下载入口)
 publicRoutes.get("/api/plugins", async (c) => {
   const type = c.req.query("type"), q = c.req.query("q");
   const rows = await listPlugins(c.env, { type: type ? Number(type) : undefined, q: q || undefined });
-  return ok(rows.map((p) => ({
+  return cached(ok(rows.map((p) => ({
     name: p.name, title: p.title, type: p.type, author: p.author,
     description: p.description, latest_version: p.latest_version,
-  })));
+  }))));
 });
 
 // 详情:GET /api/plugins/:name -> { plugin, releases }
@@ -42,7 +53,7 @@ publicRoutes.get("/api/plugins/:name", async (c) => {
     description: p.description, homepage: p.homepage,
     latest_version: p.latest_version, created_at: p.created_at, updated_at: p.updated_at,
   };
-  return ok({ plugin, releases });
+  return cached(ok({ plugin, releases }));
 });
 
 // 检查更新:GET /api/plugins/:name/check-update?current=
@@ -51,5 +62,5 @@ publicRoutes.get("/api/plugins/:name/check-update", async (c) => {
   if (!p) return err(3001, "插件不存在", 404);
   const current = c.req.query("current") ?? "0.0.0";
   const latest = p.latest_version ?? "0.0.0";
-  return ok({ has_update: gt(latest, current), latest, min_program_version: null });
+  return cached(ok({ has_update: gt(latest, current), latest, min_program_version: null }));
 });
