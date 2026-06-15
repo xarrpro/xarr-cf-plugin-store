@@ -15,8 +15,28 @@ import fflateJs from "./vendor/fflate.js.txt";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// 根路径:公开橱窗(仅展示,不可下载;__DL_BASE__ 置空)
-app.get("/", (c) => c.html(STORE_HTML.split("__DL_BASE__").join("")));
+// 根路径:不再公开展示插件列表,仅提示需从授权路径访问。
+const ROOT_NOTICE_HTML = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>需要授权访问</title>
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:#0b0f17;color:#e6edf3;padding:24px}
+.card{max-width:420px;text-align:center;background:#11161f;border:1px solid #222b39;
+  border-radius:16px;padding:40px 32px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.icon{font-size:44px;line-height:1;margin-bottom:16px}
+h1{font-size:20px;margin:0 0 10px}
+p{margin:0;color:#9aa7b6;font-size:14px;line-height:1.7}
+</style></head><body>
+<div class="card">
+  <div class="icon">🔒</div>
+  <h1>需要授权访问</h1>
+  <p>本服务不公开展示插件列表。<br>请通过你获得的授权地址访问。</p>
+</div>
+</body></html>`;
+app.get("/", (c) => c.html(ROOT_NOTICE_HTML));
 // 健康检查
 app.get("/healthz", (c) => c.json({ ok: true, version: "0.2.0" }));
 // 离线静态资源(Shoelace/fflate,产物内联进 Worker;不可变长缓存)
