@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { env } from "cloudflare:test";
-import { applyMigrations, seedAuth, TEST_TOKEN, TEST_GATEWAY } from "./helpers";
-import { getGatewayUuid, verifyToken, issueToken, revokeToken } from "../src/services/tokens";
+import { applyMigrations, seedAuth, TEST_TOKEN, TEST_GATEWAY, TEST_ADMIN_PATH } from "./helpers";
+import { verifyToken, issueToken, revokeToken } from "../src/services/tokens";
 import { putPackage, getPackage, deletePackage, packageKey } from "../src/services/storage";
 import { createPlugin, getPluginByName, insertReleaseAtomic, writeAudit } from "../src/services/db";
 import app from "../src/index";
@@ -11,7 +11,6 @@ import { sha256Hex } from "../src/lib/hash";
 beforeEach(async () => { await applyMigrations(); await seedAuth(); });
 
 describe("tokens service", () => {
-  it("getGatewayUuid", async () => { expect(await getGatewayUuid(env)).toBe(TEST_GATEWAY); });
   it("verifyToken", async () => {
     expect(await verifyToken(env, TEST_TOKEN)).not.toBeNull();
     expect(await verifyToken(env, "wrong")).toBeNull();
@@ -62,11 +61,11 @@ describe("db service", () => {
   });
 });
 
-const adminUrl = (p: string) => `https://x/${TEST_GATEWAY}/admin${p}`;
+const adminUrl = (p: string) => `https://x/${TEST_ADMIN_PATH}${p}`;
 
 describe("admin routes", () => {
-  it("错误网关 uuid → 404", async () => {
-    const res = await app.request("https://x/wrong/admin/plugins",
+  it("错误后台路径 → 404", async () => {
+    const res = await app.request("https://x/wrong/plugins",
       { method: "POST", headers: authHeaders(), body: "{}" }, env);
     expect(res.status).toBe(404);
   });

@@ -7,7 +7,11 @@ export default defineWorkersConfig({
     poolOptions: {
       workers: {
         wrangler: { configPath: "./wrangler.toml" },
-        miniflare: { compatibilityFlags: ["nodejs_compat"] },
+        miniflare: {
+          compatibilityFlags: ["nodejs_compat"],
+          // 测试环境注入后台密路径(线上是 Cloudflare Secret,不在 wrangler.toml)
+          bindings: { ADMIN_PATH: "test-admin", GATEWAY_UUID_SEED: "" },
+        },
       },
     },
   },

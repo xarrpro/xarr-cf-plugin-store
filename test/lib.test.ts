@@ -31,14 +31,16 @@ describe("hash", () => {
 });
 
 describe("manifest", () => {
-  function buildZip(manifestObj: unknown): ArrayBuffer {
-    const files: Record<string, Uint8Array> = { "plugin.lua": strToU8("-- code") };
-    if (manifestObj !== undefined) files["manifest.json"] = strToU8(JSON.stringify(manifestObj));
+  // zip 内需为「{name}/...」单一顶层目录;manifest 未指定 name 时默认 demo
+  function buildZip(manifestObj: any): ArrayBuffer {
+    const name = manifestObj && typeof manifestObj.name === "string" ? manifestObj.name : "demo";
+    const files: Record<string, Uint8Array> = { [`${name}/plugin.lua`]: strToU8("-- code") };
+    if (manifestObj !== undefined) files[`${name}/manifest.json`] = strToU8(JSON.stringify(manifestObj));
     const z = zipSync(files);
     return z.buffer.slice(z.byteOffset, z.byteOffset + z.byteLength);
   }
   it("解析合法 manifest", async () => {
-    const m = await parseManifestFromZip(buildZip({ name: "demo", title: "Demo", version: "1.0.0", type: 1 }));
+    const m = await parseManifestFromZip(buildZip({ name: "demo", title: "Demo", author: "x", description: "d", version: "1.0.0", min_program_version: "1.0.0", type: 1 }));
     expect(m.name).toBe("demo");
     expect(m.version).toBe("1.0.0");
   });
@@ -46,7 +48,7 @@ describe("manifest", () => {
     await expect(parseManifestFromZip(buildZip(undefined))).rejects.toBeInstanceOf(ManifestError);
   });
   it("缺必填字段抛错", async () => {
-    await expect(parseManifestFromZip(buildZip({ title: "D", version: "1.0.0" }))).rejects.toThrow(/name/);
+    await expect(parseManifestFromZip(buildZip({ name: "demo", title: "D", version: "1.0.0" }))).rejects.toThrow(/缺少必填字段/);
   });
 });
 

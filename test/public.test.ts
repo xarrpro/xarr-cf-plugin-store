@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { env } from "cloudflare:test";
-import { applyMigrations, seedAuth, authHeaders, buildPluginZip, TEST_GATEWAY } from "./helpers";
+import { applyMigrations, seedAuth, authHeaders, buildPluginZip, TEST_GATEWAY, TEST_ADMIN_PATH } from "./helpers";
 import app from "../src/index";
 import { sha256Hex } from "../src/lib/hash";
 
 beforeEach(async () => { await applyMigrations(); await seedAuth(); });
 
 async function seed() {
-  await app.request(`https://x/${TEST_GATEWAY}/admin/plugins`, {
+  await app.request(`https://x/${TEST_ADMIN_PATH}/plugins`, {
     method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify({ name: "demo", title: "Demo", type: 1 }),
   }, env);
   const zip = buildPluginZip({ name: "demo", title: "Demo", version: "1.0.0", type: 1 });
   const sha = await sha256Hex(zip);
-  await app.request(`https://x/${TEST_GATEWAY}/admin/plugins/demo/releases`, {
+  await app.request(`https://x/${TEST_ADMIN_PATH}/plugins/demo/releases`, {
     method: "POST", headers: { ...authHeaders(), "Content-Type": "application/zip", "X-Package-Sha256": sha }, body: zip,
   }, env);
 }
@@ -38,13 +38,13 @@ describe("public routes", () => {
   });
   it("下载", async () => {
     await seed();
-    const res = await app.request("https://x/dl/demo/1.0.0", {}, env);
+    const res = await app.request(`https://x/${TEST_GATEWAY}/dl/demo/1.0.0`, {}, env);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("zip");
     expect((await res.arrayBuffer()).byteLength).toBeGreaterThan(0);
   });
   it("下载不存在版本 404", async () => {
     await seed();
-    expect((await app.request("https://x/dl/demo/9.9.9", {}, env)).status).toBe(404);
+    expect((await app.request(`https://x/${TEST_GATEWAY}/dl/demo/9.9.9`, {}, env)).status).toBe(404);
   });
 });
