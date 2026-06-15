@@ -125,8 +125,8 @@ describe("publish", () => {
         url: String(url), method: String(opt.method),
         headers, bodyIsZip: opt.body instanceof Uint8Array,
       });
-      if (String(url).endsWith("/admin/plugins")) return new Response(JSON.stringify({ code: 0, data: {} }), { status: 200 });
-      return new Response(JSON.stringify({ code: 0, data: { version: "1.0.0" } }), { status: 200 });
+      if (String(url).endsWith("/admin/plugins")) return new Response(JSON.stringify({ code: 200, data: {} }), { status: 200 });
+      return new Response(JSON.stringify({ code: 200, data: { version: "1.0.0" } }), { status: 200 });
     }) as unknown as typeof fetch;
 
     const r = await publish({
@@ -149,7 +149,7 @@ describe("publish", () => {
   it("插件已存在(409)时继续上传", async () => {
     const fetchImpl = (async (url: string) => {
       if (String(url).endsWith("/admin/plugins")) return new Response("{}", { status: 409 });
-      return new Response(JSON.stringify({ code: 0, data: {} }), { status: 200 });
+      return new Response(JSON.stringify({ code: 200, data: {} }), { status: 200 });
     }) as unknown as typeof fetch;
     const r = await publish({
       dir, config: { baseUrl: "https://x", gatewayUuid: "gw", token: "tok" }, fetchImpl,
@@ -163,7 +163,7 @@ describe("publish", () => {
     const fetchImpl = (async (url: string) => {
       if (String(url).includes("/releases")) { releaseUrl = String(url); }
       if (String(url).endsWith("/admin/plugins")) return new Response("{}", { status: 200 });
-      return new Response(JSON.stringify({ code: 0, data: {} }), { status: 200 });
+      return new Response(JSON.stringify({ code: 200, data: {} }), { status: 200 });
     }) as unknown as typeof fetch;
     await publish({
       dir, channel: "beta",

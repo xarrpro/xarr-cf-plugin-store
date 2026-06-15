@@ -9,12 +9,12 @@ describe("response", () => {
   it("ok 包络", async () => {
     const res = ok({ a: 1 });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ code: 0, msg: "ok", data: { a: 1 } });
+    expect(await res.json()).toEqual({ code: 200, message: "ok", data: { a: 1 } });
   });
   it("err 包络", async () => {
     const res = err(1001, "unauthorized", 401);
     expect(res.status).toBe(401);
-    expect(await res.json()).toEqual({ code: 1001, msg: "unauthorized", data: null });
+    expect(await res.json()).toEqual({ code: 1001, message: "unauthorized", data: null });
   });
 });
 

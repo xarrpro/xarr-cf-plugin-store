@@ -56,13 +56,13 @@ app.post("/:uuid/api/v1/download/ticket", rateLimitGuard, gatewayGuard, download
 app.get("/:uuid/dl/:name/:version", rateLimitGuard, gatewayGuard, async (c) => {
   const name = c.req.param("name"), version = c.req.param("version");
   const p = await getPluginByName(c.env, name);
-  if (!p) return c.json({ code: 3001, msg: "插件不存在", data: null }, 404);
+  if (!p) return c.json({ code: 3001, message: "插件不存在", data: null }, 404);
   const target = version === "latest" ? (p.latest_version ?? "") : version;
   const rels = await getReleases(c.env, p.id);
   const rel = rels.find((r: any) => r.version === target) as any;
-  if (!rel) return c.json({ code: 3001, msg: "版本不存在", data: null }, 404);
+  if (!rel) return c.json({ code: 3001, message: "版本不存在", data: null }, 404);
   const obj = await getPackage(c.env, rel.r2_key);
-  if (!obj) return c.json({ code: 3001, msg: "包文件丢失", data: null }, 404);
+  if (!obj) return c.json({ code: 3001, message: "包文件丢失", data: null }, 404);
   await incrDownload(c.env, p.id, target);
   const body = await obj.arrayBuffer();
   return new Response(body, {

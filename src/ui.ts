@@ -154,7 +154,7 @@ function loadPublic(){
 }
 function openDetail(name){
   jget('/api/plugins/'+encodeURIComponent(name)).then(function(j){
-    if(!j||j.code!==0){toast('加载失败','danger');return}
+    if(!j||j.code!==200){toast('加载失败','danger');return}
     var p=j.data.plugin, rels=j.data.releases||[];
     var h='<div class="mono" style="margin-bottom:8px">'+esc(p.name)+' · '+esc(typeName(p.type))+(p.author?' · '+esc(p.author):'')+'</div>';
     h+='<p style="color:var(--mut);margin-top:0">'+esc(p.description||'暂无描述')+'</p>';
@@ -234,7 +234,7 @@ function areq(method,path,body,raw,extraHeaders){
   if(extraHeaders){for(var k in extraHeaders)h[k]=extraHeaders[k]}
   return fetch(adminBase()+path,opt).then(function(r){
     if(r.status===401){throw {code:4010,msg:'令牌失效,请重新登录'}}
-    return r.json().then(function(j){if(j.code!==0)throw j;return j.data})
+    return r.json().then(function(j){if(j.code!==200)throw j;return j.data})
   })
 }
 function doLogin(){
@@ -243,7 +243,7 @@ function doLogin(){
   TOKEN=tok;$('loginErr').textContent='验证中…';$('loginBtn').loading=true;
   areq('GET','/plugins').then(function(){
     sessionStorage.setItem('ps_token_'+ADMIN_BASE,tok);$('loginBtn').loading=false;enterAdmin();
-  }).catch(function(e){$('loginBtn').loading=false;$('loginErr').textContent=(e&&e.msg)||'登录失败:令牌错误'});
+  }).catch(function(e){$('loginBtn').loading=false;$('loginErr').textContent=(e&&e.message)||'登录失败:令牌错误'});
 }
 function logout(){TOKEN='';sessionStorage.removeItem('ps_token_'+ADMIN_BASE);$('adminView').style.display='none';$('loginView').style.display='flex';$('logoutBtn').style.display='none';$('hbInfo').textContent=''}
 function enterAdmin(){
@@ -286,21 +286,21 @@ function openNew(){openModal(pluginForm({})+'<div class="modal-foot"><sl-button 
 function saveNew(){
   var b={name:$('fName').value.trim(),title:$('fTitle').value.trim(),type:Number($('fType').value),author:$('fAuthor').value.trim(),description:$('fDesc').value.trim(),homepage:$('fHome').value.trim()};
   if(!b.name||!b.title){toast('name 与 title 必填','warning');return}
-  areq('POST','/plugins',b).then(function(){closeModal();loadAdmin();toast('已创建','success')}).catch(function(e){toast((e&&e.msg)||'创建失败','danger')});
+  areq('POST','/plugins',b).then(function(){closeModal();loadAdmin();toast('已创建','success')}).catch(function(e){toast((e&&e.message)||'创建失败','danger')});
 }
 function openEdit(p){openModal(pluginForm(p)+'<div class="modal-foot"><sl-button onclick="closeModal()">取消</sl-button><sl-button variant="primary" onclick="saveEdit(\\''+esc(p.name)+'\\')">保存</sl-button></div>','编辑插件')}
 function saveEdit(name){
   var b={title:$('fTitle').value.trim(),type:Number($('fType').value),author:$('fAuthor').value.trim(),description:$('fDesc').value.trim(),homepage:$('fHome').value.trim()};
-  areq('PATCH','/plugins/'+encodeURIComponent(name),b).then(function(){closeModal();loadAdmin();toast('已保存','success')}).catch(function(e){toast((e&&e.msg)||'保存失败','danger')});
+  areq('PATCH','/plugins/'+encodeURIComponent(name),b).then(function(){closeModal();loadAdmin();toast('已保存','success')}).catch(function(e){toast((e&&e.message)||'保存失败','danger')});
 }
 function toggleStatus(p){
   var ns=p.status===1?2:1;
-  areq('PATCH','/plugins/'+encodeURIComponent(p.name)+'/status',{status:ns}).then(function(){loadAdmin();toast(ns===1?'已上架':'已下架','success')}).catch(function(e){toast((e&&e.msg)||'操作失败','danger')});
+  areq('PATCH','/plugins/'+encodeURIComponent(p.name)+'/status',{status:ns}).then(function(){loadAdmin();toast(ns===1?'已上架':'已下架','success')}).catch(function(e){toast((e&&e.message)||'操作失败','danger')});
 }
 function delPlugin(name){
   confirmDialog('软删除插件 '+name+'?可恢复,不会删除版本文件。',{title:'软删除'}).then(function(okv){
     if(!okv)return;
-    areq('DELETE','/plugins/'+encodeURIComponent(name)).then(function(){loadAdmin();toast('已软删除','success')}).catch(function(e){toast((e&&e.msg)||'删除失败','danger')});
+    areq('DELETE','/plugins/'+encodeURIComponent(name)).then(function(){loadAdmin();toast('已软删除','success')}).catch(function(e){toast((e&&e.message)||'删除失败','danger')});
   });
 }
 function purgePlugin(name){
@@ -308,7 +308,7 @@ function purgePlugin(name){
     if(!okv)return;
     confirmDialog('再次确认:彻底删除 '+name+' 及全部版本?',{title:'⚠️ 二次确认',danger:true,ok:'确认删除'}).then(function(ok2){
       if(!ok2)return;
-      areq('DELETE','/plugins/'+encodeURIComponent(name)+'/purge').then(function(d){loadAdmin();toast('已彻底删除('+((d&&d.releases)||0)+' 个版本)','success')}).catch(function(e){toast((e&&e.msg)||'删除失败','danger')});
+      areq('DELETE','/plugins/'+encodeURIComponent(name)+'/purge').then(function(d){loadAdmin();toast('已彻底删除('+((d&&d.releases)||0)+' 个版本)','success')}).catch(function(e){toast((e&&e.message)||'删除失败','danger')});
     });
   });
 }
@@ -330,7 +330,7 @@ function openVersions(name){
       h+='<div class="rel"><div><b>v'+esc(r.version)+'</b> <sl-tag size="small" variant="neutral">'+esc(r.channel)+'</sl-tag> '+st+'<div class="mono">'+kb(r.package_size)+' · '+ts(r.created_at)+'</div></div><div class="actions">'+dl+tog+del+'</div></div>';
     });
     openModal(h,'版本管理 · '+name);
-  }).catch(function(e){toast((e&&e.msg)||'加载失败','danger')});
+  }).catch(function(e){toast((e&&e.message)||'加载失败','danger')});
 }
 function sha256hex(buf){return crypto.subtle.digest('SHA-256',buf).then(function(d){var a=Array.prototype.map.call(new Uint8Array(d),function(b){return ('0'+b.toString(16)).slice(-2)});return a.join('')})}
 function isJunkPath(rel){
@@ -387,15 +387,15 @@ function doPublish(name){
     var buf=u8.buffer.slice(u8.byteOffset,u8.byteOffset+u8.byteLength);
     return publishBuffer(name,buf,ch);
   }).then(function(d){toast('发布成功 v'+(d&&d.version),'success');openVersions(name);loadAdmin()})
-    .catch(function(e){if($('pubBtn'))$('pubBtn').loading=false;toast('发布失败:'+((e&&e.msg)||'未知错误'),'danger')});
+    .catch(function(e){if($('pubBtn'))$('pubBtn').loading=false;toast('发布失败:'+((e&&e.message)||'未知错误'),'danger')});
 }
 function relStatus(name,version,channel,status){
-  areq('PATCH','/plugins/'+encodeURIComponent(name)+'/releases/'+encodeURIComponent(version)+'/status?channel='+encodeURIComponent(channel),{status:status}).then(function(){openVersions(name);loadAdmin();toast(status===1?'已上架':'已下架','success')}).catch(function(e){toast((e&&e.msg)||'操作失败','danger')});
+  areq('PATCH','/plugins/'+encodeURIComponent(name)+'/releases/'+encodeURIComponent(version)+'/status?channel='+encodeURIComponent(channel),{status:status}).then(function(){openVersions(name);loadAdmin();toast(status===1?'已上架':'已下架','success')}).catch(function(e){toast((e&&e.message)||'操作失败','danger')});
 }
 function delRelease(name,version,channel){
   confirmDialog('删除版本 v'+version+'('+channel+')?将物理删除该版本文件,不可恢复!',{title:'⚠️ 删除版本',danger:true,ok:'删除'}).then(function(okv){
     if(!okv)return;
-    areq('DELETE','/plugins/'+encodeURIComponent(name)+'/releases/'+encodeURIComponent(version)+'?channel='+encodeURIComponent(channel)).then(function(){openVersions(name);loadAdmin();toast('已删除该版本','success')}).catch(function(e){toast((e&&e.msg)||'删除失败','danger')});
+    areq('DELETE','/plugins/'+encodeURIComponent(name)+'/releases/'+encodeURIComponent(version)+'?channel='+encodeURIComponent(channel)).then(function(){openVersions(name);loadAdmin();toast('已删除该版本','success')}).catch(function(e){toast((e&&e.message)||'删除失败','danger')});
   });
 }
 function openTokens(){
@@ -409,7 +409,7 @@ function openTokens(){
     });
     h+='</tbody></table>';
     openModal(h,'令牌管理');
-  }).catch(function(e){toast((e&&e.msg)||'加载失败','danger')});
+  }).catch(function(e){toast((e&&e.message)||'加载失败','danger')});
 }
 function issueTok(){
   var name=$('tkName').value.trim()||'unnamed';
@@ -421,12 +421,12 @@ function issueTok(){
     al.innerHTML='<b>🔑 新令牌(仅显示一次,请保存):</b><br><span class="mono" style="word-break:break-all">'+esc(d.plaintext)+'</span>';
     box.appendChild(al);
     toast('已签发','success');
-  }).catch(function(e){$('tkBtn').loading=false;toast((e&&e.msg)||'签发失败','danger')});
+  }).catch(function(e){$('tkBtn').loading=false;toast((e&&e.message)||'签发失败','danger')});
 }
 function revokeTok(id){
   confirmDialog('确认吊销令牌 '+id+'?',{title:'吊销令牌',danger:true,ok:'吊销'}).then(function(okv){
     if(!okv)return;
-    areq('DELETE','/tokens/'+encodeURIComponent(id)).then(function(){openTokens();toast('已吊销','success')}).catch(function(e){toast((e&&e.msg)||'失败','danger')});
+    areq('DELETE','/tokens/'+encodeURIComponent(id)).then(function(){openTokens();toast('已吊销','success')}).catch(function(e){toast((e&&e.message)||'失败','danger')});
   });
 }
 function gwLink(uuid){return location.origin+'/'+uuid}
@@ -445,17 +445,17 @@ function openGateways(){
     });
     h+='</tbody></table>';
     openModal(h,'下载入口管理');
-  }).catch(function(e){toast((e&&e.msg)||'加载失败','danger')});
+  }).catch(function(e){toast((e&&e.message)||'加载失败','danger')});
 }
 function issueGw(){
   var name=$('gwName').value.trim()||'未命名';
   $('gwBtn').loading=true;
-  areq('POST','/gateways',{name:name}).then(function(){$('gwBtn').loading=false;openGateways();loadDlBase();toast('已签发','success')}).catch(function(e){$('gwBtn').loading=false;toast((e&&e.msg)||'签发失败','danger')});
+  areq('POST','/gateways',{name:name}).then(function(){$('gwBtn').loading=false;openGateways();loadDlBase();toast('已签发','success')}).catch(function(e){$('gwBtn').loading=false;toast((e&&e.message)||'签发失败','danger')});
 }
 function revokeGw(uuid){
   confirmDialog('吊销该下载入口?\\n'+gwLink(uuid)+'\\n吊销后该地址立即失效,不可恢复。',{title:'⚠️ 吊销下载入口',danger:true,ok:'吊销'}).then(function(okv){
     if(!okv)return;
-    areq('DELETE','/gateways/'+encodeURIComponent(uuid)).then(function(){openGateways();loadDlBase();toast('已吊销','success')}).catch(function(e){toast((e&&e.msg)||'失败','danger')});
+    areq('DELETE','/gateways/'+encodeURIComponent(uuid)).then(function(){openGateways();loadDlBase();toast('已吊销','success')}).catch(function(e){toast((e&&e.message)||'失败','danger')});
   });
 }
 $('logoutBtn').addEventListener('click',logout);
