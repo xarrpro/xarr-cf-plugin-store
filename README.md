@@ -10,6 +10,8 @@
 [![Hono](https://img.shields.io/badge/Hono-4-E36002)](https://hono.dev/)
 [![Deploy](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](#方式三github-actions-自动部署)
 
+简体中文 · [English](README.en.md)
+
 </div>
 
 ---
@@ -20,11 +22,18 @@
 
 **XArr Plugin Store** 是其中的插件分发组件:商户在 XArr Pay 后台填入一个授权地址,即可同步、安装由本服务托管的插件——无需各自打包分发,集中管理、按需授权。
 
-```
-┌─────────────────┐      插件源地址 /<uuid>/source     ┌──────────────────────┐
-│  XArr Plugin     │ ─────────────────────────────────► │  XArr Pay 商户系统     │
-│  Store (本服务)   │      列表同步 · 票据下载 · 安装       │  (merchant-server)    │
-└─────────────────┘                                     └──────────────────────┘
+```mermaid
+flowchart LR
+    A["XArr Plugin Store<br/>(本服务 · Cloudflare Workers)"]
+    B["XArr Pay 商户系统<br/>(merchant-server)"]
+    A -- "插件源地址 /:uuid/source" --> B
+    B -- "列表同步 · 票据下载 · 安装" --> A
+    subgraph 边缘存储
+        D[(D1)]
+        R[(R2)]
+        K[(KV)]
+    end
+    A --- D & R & K
 ```
 
 ---
